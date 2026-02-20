@@ -1,0 +1,226 @@
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Vazirmatn', 'Segoe UI', 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #232933;
+  line-height: 1.8;
+  background-color: #f5f5f5;
+  direction: rtl;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* Buttons - Digikala Style */
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #ef4056 0%, #ef4056 100%);
+  color: white;
+  box-shadow: 0 2px 4px rgba(239, 64, 86, 0.2);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #e6123d 0%, #e6123d 100%);
+  box-shadow: 0 4px 8px rgba(239, 64, 86, 0.3);
+}
+
+.btn-secondary {
+  background-color: white;
+  color: #232933;
+  border: 1px solid #e0e0e6;
+}
+
+.btn-secondary:hover {
+  background-color: #f5f5f5;
+  border-color: #d0d0d0;
+}
+
+/* Grid Layout */
+.grid {
+  display: grid;
+  gap: 16px;
+}
+
+.grid-4 {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+@media (min-width: 768px) {
+  .grid-4 {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+}
+
+/* Product Card - Digikala Style */
+.card {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  border: 1px solid #f0f0f1;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.card img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  background: #f5f5f5;
+}
+
+.card-content {
+  padding: 12px;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 400;
+  margin-bottom: 8px;
+  color: #232933;
+  line-height: 1.6;
+  height: 44px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.card-price {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.card-price-main {
+  font-size: 18px;
+  font-weight: 700;
+  color: #232933;
+}
+
+.card-price-old {
+  font-size: 14px;
+  color: #a1a3a8;
+  text-decoration: line-through;
+}
+
+.card-discount {
+  background: #ef4056;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Header Styles */
+.header {
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+/* Price Format */
+.price {
+  font-family: 'Vazirmatn', sans-serif;
+  direction: ltr;
+  display: inline-block;
+}
+
+.price::after {
+  content: ' تومان';
+  font-size: 0.85em;
+  margin-right: 4px;
+}
+
+/* Rating Stars */
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #ffa000;
+  font-size: 14px;
+}
+
+/* Badge */
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge-new {
+  background: #00a854;
+  color: white;
+}
+
+.badge-sale {
+  background: #ef4056;
+  color: white;
+}
+
+/* Search Box */
+.search-box {
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 2px solid #ef4056;
+  border-radius: 8px;
+  padding: 8px 16px;
+  gap: 8px;
+}
+
+.search-box input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+/* Section Title */
+.section-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #232933;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #ef4056;
+  display: inline-block;
+}
+

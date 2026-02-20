@@ -1,0 +1,23 @@
+version: '3.8'
+
+# Development override - use this for hot-reload
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./backend:/app
+    command: go run main.go
+    environment:
+      # Override for development
+      - GIN_MODE=debug
+
+  frontend:
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+
