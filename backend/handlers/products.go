@@ -427,8 +427,43 @@ func SearchProducts(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"products": products})
 }
 
+func GetCategory(c *gin.Context) {
+	id := c.Param("id")
+	var cat struct {
+		ID          int
+		Name        string
+		NameEn      sql.NullString
+		Slug        string
+		ParentID    sql.NullInt64
+		Description sql.NullString
+		ImageURL    sql.NullString
+	}
+	err := database.DB.QueryRow(
+		"SELECT id, name, name_en, slug, parent_id, description, image_url FROM categories WHERE id = ?",
+		id,
+	).Scan(&cat.ID, &cat.Name, &cat.NameEn, &cat.Slug, &cat.ParentID, &cat.Description, &cat.ImageURL)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "دسته‌بندی یافت نشد"})
+		return
+	}
+	parentID := (*int)(nil)
+	if cat.ParentID.Valid {
+		idVal := int(cat.ParentID.Int64)
+		parentID = &idVal
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"id":          cat.ID,
+		"name":        cat.Name,
+		"name_en":     getStringValue(cat.NameEn),
+		"slug":        cat.Slug,
+		"parent_id":   parentID,
+		"description": getStringValue(cat.Description),
+		"image_url":   getStringValue(cat.ImageURL),
+	})
+}
+
 func GetCategories(c *gin.Context) {
-	query := "SELECT id, name, slug, parent_id, description, image_url FROM categories ORDER BY sort_order, name"
+	query := "SELECT id, name, name_en, slug, parent_id, description, image_url FROM categories ORDER BY sort_order, name"
 
 	rows, err := database.DB.Query(query)
 	if err != nil {
@@ -440,6 +475,7 @@ func GetCategories(c *gin.Context) {
 	type catRow struct {
 		ID          int
 		Name        string
+		NameEn      sql.NullString
 		Slug        string
 		ParentID    sql.NullInt64
 		Description sql.NullString
@@ -449,7 +485,7 @@ func GetCategories(c *gin.Context) {
 	var rowsList []catRow
 	for rows.Next() {
 		var cat catRow
-		err := rows.Scan(&cat.ID, &cat.Name, &cat.Slug, &cat.ParentID, &cat.Description, &cat.ImageURL)
+		err := rows.Scan(&cat.ID, &cat.Name, &cat.NameEn, &cat.Slug, &cat.ParentID, &cat.Description, &cat.ImageURL)
 		if err != nil {
 			continue
 		}
@@ -467,6 +503,7 @@ func GetCategories(c *gin.Context) {
 		categories = append(categories, map[string]interface{}{
 			"id":          cat.ID,
 			"name":        cat.Name,
+			"name_en":     getStringValue(cat.NameEn),
 			"slug":        cat.Slug,
 			"parent_id":   parentID,
 			"description": getStringValue(cat.Description),

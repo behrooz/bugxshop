@@ -21,8 +21,9 @@ export default function CartPage() {
     city: '',
     state: '',
     zip_code: '',
-    country: 'USA',
+    country: 'ایران',
   })
+  const formatPrice = (p: number) => new Intl.NumberFormat('fa-IR').format(p)
 
   useEffect(() => {
     let id = localStorage.getItem('sessionId')
@@ -70,16 +71,24 @@ export default function CartPage() {
         session_id: sessionId,
         ...formData,
       })
-      alert('Order placed successfully!')
+      alert('سفارش با موفقیت ثبت شد.')
       setCart({ items: [], total: 0 })
       setCheckout(false)
     } catch (error: any) {
-      alert('Error placing order: ' + (error.response?.data?.error || error.message))
+      alert('خطا در ثبت سفارش: ' + (error.response?.data?.error || error.message))
     }
   }
 
   if (loading) {
-    return <div>Loading...</div>
+    return (
+      <>
+        <Header categories={categories} />
+        <main style={{ padding: '40px 0', minHeight: '60vh' }}>
+          <div className="container" style={{ textAlign: 'center', color: '#666' }}>در حال بارگذاری...</div>
+        </main>
+        <Footer />
+      </>
+    )
   }
 
   return (
@@ -87,10 +96,10 @@ export default function CartPage() {
       <Header categories={categories} />
       <main style={{ padding: '40px 0', minHeight: '60vh' }}>
         <div className="container">
-          <h1>Shopping Cart</h1>
+          <h1 style={{ fontSize: '28px' }}>سبد خرید</h1>
           {cart.items.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 0' }}>
-              <p>Your cart is empty</p>
+              <p>سبد خرید شما خالی است.</p>
             </div>
           ) : (
             <>
@@ -112,11 +121,11 @@ export default function CartPage() {
                     />
                     <div style={{ flex: 1 }}>
                       <h3>{item.product.name}</h3>
-                      <p>Quantity: {item.quantity}</p>
-                      <p>Price: ${item.product.price.toFixed(2)}</p>
+                      <p>تعداد: {formatPrice(item.quantity)}</p>
+                      <p>قیمت: {formatPrice(item.product.price)} تومان</p>
                     </div>
                     <div>
-                      <strong>${item.item_total.toFixed(2)}</strong>
+                      <strong>{formatPrice(item.item_total)} تومان</strong>
                     </div>
                   </div>
                 ))}
@@ -133,15 +142,15 @@ export default function CartPage() {
                   fontSize: '24px',
                   fontWeight: 'bold',
                 }}>
-                  <span>Total:</span>
-                  <span>${cart.total.toFixed(2)}</span>
+                  <span>جمع کل:</span>
+                  <span>{formatPrice(cart.total)} تومان</span>
                 </div>
                 <button
                   onClick={() => setCheckout(true)}
                   className="btn btn-primary"
                   style={{ width: '100%', marginTop: '20px' }}
                 >
-                  Proceed to Checkout
+                  ادامه و پرداخت
                 </button>
               </div>
 
@@ -153,12 +162,12 @@ export default function CartPage() {
                   border: '1px solid #e0e0e0',
                   borderRadius: '8px',
                 }}>
-                  <h2>Checkout</h2>
+                  <h2>تکمیل خرید</h2>
                   <form onSubmit={handleCheckout}>
                     <div style={{ display: 'grid', gap: '15px', marginTop: '20px' }}>
                       <input
                         type="text"
-                        placeholder="Full Name"
+                        placeholder="نام و نام خانوادگی"
                         required
                         value={formData.customer_name}
                         onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
@@ -166,7 +175,7 @@ export default function CartPage() {
                       />
                       <input
                         type="email"
-                        placeholder="Email"
+                        placeholder="ایمیل"
                         required
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -174,7 +183,7 @@ export default function CartPage() {
                       />
                       <input
                         type="tel"
-                        placeholder="Phone"
+                        placeholder="تلفن"
                         required
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -182,7 +191,7 @@ export default function CartPage() {
                       />
                       <input
                         type="text"
-                        placeholder="Address"
+                        placeholder="آدرس"
                         required
                         value={formData.address}
                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
@@ -191,7 +200,7 @@ export default function CartPage() {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                         <input
                           type="text"
-                          placeholder="City"
+                          placeholder="شهر"
                           required
                           value={formData.city}
                           onChange={(e) => setFormData({ ...formData, city: e.target.value })}
@@ -199,7 +208,7 @@ export default function CartPage() {
                         />
                         <input
                           type="text"
-                          placeholder="State"
+                          placeholder="استان"
                           required
                           value={formData.state}
                           onChange={(e) => setFormData({ ...formData, state: e.target.value })}
@@ -209,7 +218,7 @@ export default function CartPage() {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                         <input
                           type="text"
-                          placeholder="Zip Code"
+                          placeholder="کد پستی"
                           required
                           value={formData.zip_code}
                           onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
@@ -217,7 +226,7 @@ export default function CartPage() {
                         />
                         <input
                           type="text"
-                          placeholder="Country"
+                          placeholder="کشور"
                           required
                           value={formData.country}
                           onChange={(e) => setFormData({ ...formData, country: e.target.value })}
@@ -225,7 +234,7 @@ export default function CartPage() {
                         />
                       </div>
                       <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-                        Place Order
+                        ثبت سفارش
                       </button>
                     </div>
                   </form>

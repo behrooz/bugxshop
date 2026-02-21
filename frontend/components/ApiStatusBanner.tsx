@@ -38,7 +38,7 @@ export default function ApiStatusBanner() {
       }}
     >
       <span>
-        Backend is not reachable. Products and cart will be empty. Start the backend (e.g. F5 in <code>backend/</code> or run <code>go run main.go</code> in <code>backend/</code>), then refresh.
+        سرور در دسترس نیست. محصولات و سبد خرید خالی نمایش داده می‌شوند. سرور را اجرا کنید و صفحه را دوباره بارگذاری کنید.
       </span>
       <button
         type="button"
@@ -52,7 +52,7 @@ export default function ApiStatusBanner() {
           fontSize: '13px',
         }}
       >
-        Dismiss
+        بستن
       </button>
     </div>
   )

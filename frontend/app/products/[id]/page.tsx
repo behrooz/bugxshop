@@ -6,10 +6,10 @@ import Link from 'next/link'
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const product = await getProduct(params.id)
-  const title = product?.name || product?.name_en || product?.display_name || 'Product'
+  const title = product?.name || product?.name_en || product?.display_name || 'محصول'
   const desc = product?.description || product?.short_description || product?.display_description || ''
   return {
-    title: `${title} - Women's Fashion Store`,
+    title: `${title} - فروشگاه پوشاک زنانه`,
     description: desc,
   }
 }

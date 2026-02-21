@@ -3,6 +3,7 @@ import { getProducts, getCategories } from '@/lib/api'
 import ProductCard from '@/components/ProductCard'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
+import { getCategoryImageUrl } from '@/lib/productImage'
 
 export const metadata = {
   title: 'فروشگاه پوشاک زنانه - خرید آنلاین',
@@ -57,15 +58,24 @@ export default async function Home() {
             <div className="grid grid-4">
               {categories.slice(0, 8).map((category: any) => (
                 <Link key={category.id} href={`/category/${category.slug}`}>
-                  <div className="card" style={{ textAlign: 'center', padding: '24px' }}>
-                    <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
-                      {category.name}
-                    </h3>
-                    {category.description && (
-                      <p style={{ fontSize: '14px', color: '#a1a3a8' }}>
-                        {category.description.substring(0, 60)}...
-                      </p>
-                    )}
+                  <div className="card" style={{ textAlign: 'center', padding: 0, overflow: 'hidden' }}>
+                    <div style={{ width: '100%', aspectRatio: '1', background: '#f5f5f5' }}>
+                      <img
+                        src={getCategoryImageUrl(category)}
+                        alt={category.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </div>
+                    <div style={{ padding: '16px' }}>
+                      <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
+                        {category.name}
+                      </h3>
+                      {category.description && (
+                        <p style={{ fontSize: '14px', color: '#a1a3a8' }}>
+                          {category.description.substring(0, 60)}...
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </Link>
               ))}

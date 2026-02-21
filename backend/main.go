@@ -47,7 +47,7 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
-	// Serve uploaded files (product images)
+	// Serve uploaded files (product and category images)
 	r.Static("/uploads", "./uploads")
 
 	// API routes
@@ -59,6 +59,7 @@ func main() {
 		api.GET("/products/search", handlers.SearchProducts)
 		api.GET("/products/:id/reviews", handlers.GetProductReviews)
 		api.GET("/categories", handlers.GetCategories)
+		api.GET("/categories/:id", handlers.GetCategory)
 		api.GET("/categories/:id/products", handlers.GetProductsByCategory)
 		api.GET("/brands", handlers.GetBrands)
 		api.GET("/search/suggestions", handlers.GetSearchSuggestions)
@@ -99,11 +100,11 @@ func main() {
 		cart := api.Group("/cart")
 		cart.Use(middleware.OptionalAuthMiddleware())
 		{
-			cart.POST("/", handlers.AddToCart)
-			cart.GET("/", handlers.GetCart)
+			cart.POST("", handlers.AddToCart)
+			cart.GET("", handlers.GetCart)
 			cart.PUT("/item/:itemId", handlers.UpdateCartItem)
 			cart.DELETE("/item/:itemId", handlers.RemoveFromCart)
-			cart.DELETE("/", handlers.ClearCart)
+			cart.DELETE("", handlers.ClearCart)
 		}
 
 		// Orders
@@ -134,6 +135,7 @@ func main() {
 			// Categories & Brands
 			admin.POST("/categories", handlers.AdminCreateCategory)
 			admin.PUT("/categories/:id", handlers.AdminUpdateCategory)
+			admin.POST("/categories/:id/image", handlers.AdminUploadCategoryImage)
 			admin.POST("/brands", handlers.AdminCreateBrand)
 
 			// Orders

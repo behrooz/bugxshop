@@ -164,7 +164,7 @@ export default function ProductDetail({ product }: { product: any }) {
         )}
 
         <div style={{ marginBottom: '20px' }}>
-          <strong>موجودی:</strong> {product.stock > 0 ? `${product.stock} عدد موجود` : 'ناموجود'}
+          <strong>موجودی:</strong> {product.stock > 0 ? `${formatPrice(product.stock)} عدد موجود` : 'ناموجود'}
         </div>
 
         {product.stock > 0 && (

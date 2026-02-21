@@ -36,3 +36,14 @@ export function getProductGalleryImages(product: { id?: number; image_url?: stri
     : PLACEHOLDER_IMAGE
   return [{ url: single, thumbnail_url: single }]
 }
+
+/**
+ * Returns the image URL for a category. Uses category.image_url when set (absolute or relative); otherwise local placeholder.
+ */
+export function getCategoryImageUrl(category: { image_url?: string | null }): string {
+  const url = category?.image_url?.trim()
+  if (url && (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/'))) {
+    return url
+  }
+  return PLACEHOLDER_IMAGE
+}

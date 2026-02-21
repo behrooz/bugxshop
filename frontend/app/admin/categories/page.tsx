@@ -11,7 +11,7 @@ export default function AdminCategories() {
   const [categories, setCategories] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [formData, setFormData] = useState({ name: '', name_en: '', slug: '', parent_id: '', description: '' })
+  const [formData, setFormData] = useState({ name: '', name_en: '', slug: '', parent_id: '', description: '', image_url: '' })
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -47,11 +47,12 @@ export default function AdminCategories() {
           slug: formData.slug || formData.name_en?.toLowerCase().replace(/\s+/g, '-') || '',
           parent_id: formData.parent_id ? parseInt(formData.parent_id) : null,
           description: formData.description || '',
+          image_url: formData.image_url || undefined,
         }),
       })
       if (res.ok) {
         setShowForm(false)
-        setFormData({ name: '', name_en: '', slug: '', parent_id: '', description: '' })
+        setFormData({ name: '', name_en: '', slug: '', parent_id: '', description: '', image_url: '' })
         loadCategories()
       } else {
         const err = await res.json()
@@ -94,6 +95,7 @@ export default function AdminCategories() {
               <input type="text" placeholder="نام انگلیسی" value={formData.name_en} onChange={(e) => setFormData({ ...formData, name_en: e.target.value })} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }} />
               <input type="text" placeholder="slug" value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }} />
               <input type="text" placeholder="توضیحات" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }} />
+              <input type="url" placeholder="آدرس تصویر (اختیاری)" value={formData.image_url} onChange={(e) => setFormData({ ...formData, image_url: e.target.value })} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }} />
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button type="submit" className="btn btn-primary">ذخیره</button>
                 <button type="button" onClick={() => setShowForm(false)} className="btn btn-secondary">انصراف</button>
@@ -108,19 +110,29 @@ export default function AdminCategories() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #ddd' }}>
+                  <th style={{ padding: '12px', textAlign: 'right' }}>تصویر</th>
                   <th style={{ padding: '12px', textAlign: 'right' }}>شناسه</th>
                   <th style={{ padding: '12px', textAlign: 'right' }}>نام</th>
-                  <th style={{ padding: '12px', textAlign: 'right' }}>نام انگلیسی</th>
                   <th style={{ padding: '12px', textAlign: 'right' }}>slug</th>
+                  <th style={{ padding: '12px', textAlign: 'right' }}></th>
                 </tr>
               </thead>
               <tbody>
                 {categories.map((c: any) => (
                   <tr key={c.id} style={{ borderBottom: '1px solid #eee' }}>
+                    <td style={{ padding: '12px' }}>
+                      {c.image_url ? (
+                        <img src={c.image_url} alt="" style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '4px' }} />
+                      ) : (
+                        <span style={{ color: '#999', fontSize: '12px' }}>—</span>
+                      )}
+                    </td>
                     <td style={{ padding: '12px' }}>{c.id}</td>
                     <td style={{ padding: '12px' }}>{c.name}</td>
-                    <td style={{ padding: '12px' }}>{c.name_en || '-'}</td>
                     <td style={{ padding: '12px' }}>{c.slug}</td>
+                    <td style={{ padding: '12px' }}>
+                      <Link href={`/admin/categories/${c.id}`} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>ویرایش</Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>

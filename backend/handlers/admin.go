@@ -17,6 +17,7 @@ import (
 
 const uploadDir = "uploads"
 const uploadProductsDir = "uploads/products"
+const uploadCategoriesDir = "uploads/categories"
 const maxUploadSize = 10 << 20 // 10 MB
 var allowedImageTypes = map[string]bool{
 	"image/jpeg": true, "image/jpg": true, "image/png": true, "image/gif": true, "image/webp": true,
@@ -308,6 +309,7 @@ func AdminCreateCategory(c *gin.Context) {
 		Slug        string `json:"slug" binding:"required"`
 		ParentID    *int   `json:"parent_id"`
 		Description string `json:"description"`
+		ImageURL    string `json:"image_url"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -316,8 +318,8 @@ func AdminCreateCategory(c *gin.Context) {
 	}
 
 	result, err := database.DB.Exec(
-		"INSERT INTO categories (name, name_en, slug, parent_id, description) VALUES (?, ?, ?, ?, ?)",
-		req.Name, req.NameEn, req.Slug, req.ParentID, req.Description,
+		"INSERT INTO categories (name, name_en, slug, parent_id, description, image_url) VALUES (?, ?, ?, ?, ?, ?)",
+		req.Name, req.NameEn, req.Slug, req.ParentID, req.Description, nullIfEmpty(req.ImageURL),
 	)
 
 	if err != nil {
@@ -331,7 +333,80 @@ func AdminCreateCategory(c *gin.Context) {
 
 // AdminUpdateCategory updates a category
 func AdminUpdateCategory(c *gin.Context) {
+	categoryID := c.Param("id")
+	var req struct {
+		Name        string `json:"name"`
+		NameEn      string `json:"name_en"`
+		Slug        string `json:"slug"`
+		ParentID    *int   `json:"parent_id"`
+		Description string `json:"description"`
+		ImageURL    string `json:"image_url"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "اطلاعات ناقص است"})
+		return
+	}
+	_, err := database.DB.Exec(
+		`UPDATE categories SET name = COALESCE(NULLIF(?, ''), name), name_en = COALESCE(?, name_en), slug = COALESCE(NULLIF(?, ''), slug),
+		 parent_id = ?, description = COALESCE(?, description), image_url = COALESCE(?, image_url) WHERE id = ?`,
+		req.Name, nullIfEmpty(req.NameEn), req.Slug, req.ParentID, nullIfEmpty(req.Description), nullIfEmpty(req.ImageURL), categoryID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "خطا در به‌روزرسانی"})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"message": "دسته‌بندی به‌روزرسانی شد"})
+}
+
+func nullIfEmpty(s string) interface{} {
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
+// AdminUploadCategoryImage uploads an image for a category
+func AdminUploadCategoryImage(c *gin.Context) {
+	categoryID := c.Param("id")
+	if err := os.MkdirAll(uploadCategoriesDir, 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "خطا در ایجاد پوشهٔ آپلود"})
+		return
+	}
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "هیچ فایلی انتخاب نشده است"})
+		return
+	}
+	if fileHeader.Size > maxUploadSize {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "حجم فایل بیش از حد مجاز است"})
+		return
+	}
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	if ext == "" {
+		ext = ".jpg"
+	}
+	ct := fileHeader.Header.Get("Content-Type")
+	if ct == "" {
+		ct = mime.TypeByExtension(ext)
+	}
+	if !allowedImageTypes[ct] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "فقط تصاویر (JPEG, PNG, GIF, WebP) مجاز هستند"})
+		return
+	}
+	filename := fmt.Sprintf("%s_%d%s", categoryID, time.Now().UnixNano(), ext)
+	destPath := filepath.Join(uploadCategoriesDir, filename)
+	if err := c.SaveUploadedFile(fileHeader, destPath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "خطا در ذخیرهٔ فایل"})
+		return
+	}
+	urlPath := "/uploads/categories/" + filename
+	_, err = database.DB.Exec("UPDATE categories SET image_url = ? WHERE id = ?", urlPath, categoryID)
+	if err != nil {
+		os.Remove(destPath)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "خطا در به‌روزرسانی دسته‌بندی"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "تصویر ذخیره شد", "url": urlPath})
 }
 
 // AdminCreateBrand creates a brand
