@@ -55,7 +55,8 @@ export default function NewProduct() {
       })
 
       if (response.ok) {
-        router.push('/admin/products')
+        const data = await response.json()
+        router.push(`/admin/products/${data.id}`)
       } else {
         const error = await response.json()
         alert(error.error || 'خطا در ایجاد محصول')

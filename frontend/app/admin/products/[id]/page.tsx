@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { categoriesToTreeOptions, categoryOptionLabel } from '@/lib/categories'
@@ -28,6 +28,14 @@ export default function AdminEditProduct() {
     stock: '',
     status: 'active',
   })
+  const [newImageUrl, setNewImageUrl] = useState('')
+  const [newImageAlt, setNewImageAlt] = useState('')
+  const [newImagePrimary, setNewImagePrimary] = useState(false)
+  const [addingImage, setAddingImage] = useState(false)
+  const [uploadingFile, setUploadingFile] = useState(false)
+  const [uploadPrimary, setUploadPrimary] = useState(false)
+  const [uploadAlt, setUploadAlt] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -69,6 +77,78 @@ export default function AdminEditProduct() {
       console.error('Error loading product:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const addImage = async () => {
+    if (!newImageUrl.trim()) return
+    setAddingImage(true)
+    const token = localStorage.getItem('token')
+    try {
+      const res = await fetch(`${API_URL}/admin/products/${id}/media`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: newImageUrl.trim(), alt_text: newImageAlt.trim() || undefined, is_primary: newImagePrimary }),
+      })
+      if (res.ok) {
+        setNewImageUrl('')
+        setNewImageAlt('')
+        setNewImagePrimary(false)
+        loadProduct()
+      } else {
+        const err = await res.json()
+        alert(err.error || 'خطا در افزودن تصویر')
+      }
+    } catch {
+      alert('خطا در ارتباط با سرور')
+    } finally {
+      setAddingImage(false)
+    }
+  }
+
+  const setPrimaryImage = async (mediaId: number) => {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${API_URL}/admin/products/${id}/media/${mediaId}/primary`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}` } })
+    if (res.ok) loadProduct()
+    else alert('خطا')
+  }
+
+  const deleteImage = async (mediaId: number) => {
+    if (!confirm('این تصویر حذف شود؟')) return
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${API_URL}/admin/products/${id}/media/${mediaId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } })
+    if (res.ok) loadProduct()
+    else alert('خطا در حذف')
+  }
+
+  const uploadFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files?.length) return
+    setUploadingFile(true)
+    const token = localStorage.getItem('token')
+    const form = new FormData()
+    for (let i = 0; i < files.length; i++) form.append('file', files[i])
+    form.append('is_primary', uploadPrimary ? 'true' : 'false')
+    if (uploadAlt.trim()) form.append('alt_text', uploadAlt.trim())
+    try {
+      const res = await fetch(`${API_URL}/admin/products/${id}/media/upload`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: form,
+      })
+      if (res.ok) {
+        setUploadAlt('')
+        setUploadPrimary(false)
+        if (fileInputRef.current) fileInputRef.current.value = ''
+        loadProduct()
+      } else {
+        const err = await res.json()
+        alert(err.error || 'خطا در آپلود')
+      }
+    } catch {
+      alert('خطا در ارتباط با سرور')
+    } finally {
+      setUploadingFile(false)
     }
   }
 
@@ -209,6 +289,83 @@ export default function AdminEditProduct() {
               <label style={{ display: 'block', marginBottom: '8px' }}>برند ID</label>
               <input type="number" value={formData.brand_id} onChange={(e) => setFormData({ ...formData, brand_id: e.target.value })} style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '4px' }} />
             </div>
+
+            <div style={{ borderTop: '1px solid #eee', paddingTop: '24px', marginTop: '8px' }}>
+              <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600' }}>تصاویر محصول</label>
+              <p style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>هر محصول می‌تواند چند تصویر داشته باشد. یکی را به‌عنوان تصویر اصلی انتخاب کنید. از کامپیوتر آپلود کنید یا با URL اضافه کنید.</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+                {(product.images || []).map((img: any) => (
+                  <div key={img.id} style={{ width: '100px', border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden', background: '#f9f9f9' }}>
+                    <img src={img.url} alt={img.alt_text || ''} style={{ width: '100%', height: '80px', objectFit: 'cover' }} />
+                    <div style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {img.is_primary && <span style={{ fontSize: '11px', color: '#2e7d32', fontWeight: 600 }}>اصلی</span>}
+                      {!img.is_primary && (
+                        <button type="button" onClick={() => setPrimaryImage(img.id)} style={{ fontSize: '11px', padding: '4px', cursor: 'pointer' }}>اصلی</button>
+                      )}
+                      <button type="button" onClick={() => deleteImage(img.id)} style={{ fontSize: '11px', padding: '4px', color: '#c62828', cursor: 'pointer' }}>حذف</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginBottom: '20px' }}>
+                <p style={{ fontSize: '13px', fontWeight: 500, marginBottom: '8px' }}>آپلود از دستگاه (JPEG, PNG, GIF, WebP — حداکثر ۱۰ مگابایت)</p>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    multiple
+                    onChange={uploadFiles}
+                    style={{ display: 'none' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingFile}
+                    className="btn btn-primary"
+                    style={{ padding: '10px 20px' }}
+                  >
+                    {uploadingFile ? 'در حال آپلود...' : 'انتخاب و آپلود تصویر'}
+                  </button>
+                  <input
+                    type="text"
+                    placeholder="متن جایگزین (اختیاری)"
+                    value={uploadAlt}
+                    onChange={(e) => setUploadAlt(e.target.value)}
+                    style={{ width: '160px', padding: '10px 12px', border: '1px solid #ddd', borderRadius: '4px' }}
+                  />
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+                    <input type="checkbox" checked={uploadPrimary} onChange={(e) => setUploadPrimary(e.target.checked)} />
+                    تصویر اصلی
+                  </label>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '13px', color: '#666' }}>یا با آدرس تصویر:</span>
+                <input
+                  type="url"
+                  placeholder="آدرس تصویر (URL)"
+                  value={newImageUrl}
+                  onChange={(e) => setNewImageUrl(e.target.value)}
+                  style={{ flex: '1', minWidth: '200px', padding: '10px 12px', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+                <input
+                  type="text"
+                  placeholder="متن جایگزین (اختیاری)"
+                  value={newImageAlt}
+                  onChange={(e) => setNewImageAlt(e.target.value)}
+                  style={{ width: '140px', padding: '10px 12px', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+                  <input type="checkbox" checked={newImagePrimary} onChange={(e) => setNewImagePrimary(e.target.checked)} />
+                  تصویر اصلی
+                </label>
+                <button type="button" onClick={addImage} disabled={addingImage || !newImageUrl.trim()} className="btn btn-secondary" style={{ padding: '10px 20px' }}>
+                  {addingImage ? '...' : 'افزودن با URL'}
+                </button>
+              </div>
+            </div>
+
             <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
               <button type="submit" disabled={saving} className="btn btn-primary">{saving ? 'در حال ذخیره...' : 'ذخیره تغییرات'}</button>
               <Link href="/admin/products" className="btn btn-secondary">انصراف</Link>

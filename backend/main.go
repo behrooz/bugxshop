@@ -47,6 +47,9 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
+	// Serve uploaded files (product images)
+	r.Static("/uploads", "./uploads")
+
 	// API routes
 	api := r.Group("/api/v1")
 	{
@@ -122,6 +125,11 @@ func main() {
 			admin.PUT("/products/:id", handlers.AdminUpdateProduct)
 			admin.DELETE("/products/:id", handlers.AdminDeleteProduct)
 			admin.POST("/products/bulk-upload", handlers.AdminBulkUploadProducts)
+			admin.GET("/products/:id/media", handlers.AdminListProductMedia)
+			admin.POST("/products/:id/media", handlers.AdminAddProductMedia)
+			admin.POST("/products/:id/media/upload", handlers.AdminUploadProductMedia)
+			admin.PATCH("/products/:id/media/:mediaId/primary", handlers.AdminSetPrimaryProductMedia)
+			admin.DELETE("/products/:id/media/:mediaId", handlers.AdminDeleteProductMedia)
 
 			// Categories & Brands
 			admin.POST("/categories", handlers.AdminCreateCategory)

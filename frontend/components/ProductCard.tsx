@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { getProductImageUrl } from '@/lib/productImage'
 
 export default function ProductCard({ product }: { product: any }) {
   const price = product.sale_price || product.base_price || product.price
@@ -11,30 +12,17 @@ export default function ProductCard({ product }: { product: any }) {
     return new Intl.NumberFormat('fa-IR').format(p)
   }
 
-  const title = product.display_name || product.name_en || product.name
+  const title = product.name || product.name_en || product.display_name
+  const imageUrl = getProductImageUrl(product, 400, 300)
 
   return (
     <Link href={`/products/${product.id}`}>
       <div className="card">
-        {product.image_url ? (
-          <img
-            src={product.image_url}
-            alt={title}
-            style={{ width: '100%', height: '200px', objectFit: 'cover' }}
-          />
-        ) : (
-          <div style={{
-            width: '100%',
-            height: '200px',
-            background: '#f5f5f5',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#a1a3a8',
-          }}>
-            بدون تصویر
-          </div>
-        )}
+        <img
+          src={imageUrl}
+          alt={title}
+          style={{ width: '100%', height: '200px', objectFit: 'cover' }}
+        />
         <div className="card-content">
           <h3 className="card-title">{title}</h3>
           

@@ -1,13 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { addToCart } from '@/lib/api'
+import { getProductGalleryImages } from '@/lib/productImage'
 
 export default function ProductDetail({ product }: { product: any }) {
   const [sessionId, setSessionId] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [adding, setAdding] = useState(false)
   const [message, setMessage] = useState('')
+  const galleryImages = useMemo(() => getProductGalleryImages(product), [product])
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const currentImage = galleryImages[selectedIndex] || galleryImages[0]
+  const hasMultiple = galleryImages.length > 1
+  useEffect(() => {
+    setSelectedIndex(0)
+  }, [product?.id])
 
   useEffect(() => {
     let id = localStorage.getItem('sessionId')
@@ -36,31 +44,98 @@ export default function ProductDetail({ product }: { product: any }) {
     }
   }
 
+  const title = product.name || product.name_en || product.display_name
+
+  const goPrev = () => setSelectedIndex((i) => (i <= 0 ? galleryImages.length - 1 : i - 1))
+  const goNext = () => setSelectedIndex((i) => (i >= galleryImages.length - 1 ? 0 : i + 1))
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
       <div>
-        {product.image_url ? (
+        <div style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', background: '#f5f5f5' }}>
           <img
-            src={product.image_url}
-            alt={product.display_name || product.name_en || product.name}
-            style={{ width: '100%', borderRadius: '8px' }}
+            src={currentImage?.url}
+            alt={currentImage?.alt_text || title}
+            style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }}
           />
-        ) : (
-          <div style={{
-            width: '100%',
-            height: '500px',
-            background: '#f0f0f0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '8px',
-          }}>
-            No Image
+          {hasMultiple && (
+            <>
+              <button
+                type="button"
+                onClick={goPrev}
+                aria-label="قبلی"
+                style={{
+                  position: 'absolute',
+                  left: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '50%',
+                  border: 'none',
+                  background: 'rgba(255,255,255,0.9)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  cursor: 'pointer',
+                  fontSize: '20px',
+                }}
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                onClick={goNext}
+                aria-label="بعدی"
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '50%',
+                  border: 'none',
+                  background: 'rgba(255,255,255,0.9)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  cursor: 'pointer',
+                  fontSize: '20px',
+                }}
+              >
+                ›
+              </button>
+            </>
+          )}
+        </div>
+        {hasMultiple && (
+          <div style={{ display: 'flex', gap: '8px', marginTop: '12px', overflowX: 'auto', paddingBottom: '4px' }}>
+            {galleryImages.map((img, i) => (
+              <button
+                key={img.id ?? i}
+                type="button"
+                onClick={() => setSelectedIndex(i)}
+                style={{
+                  flexShrink: 0,
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  border: selectedIndex === i ? '2px solid #ef4056' : '2px solid transparent',
+                  padding: 0,
+                  cursor: 'pointer',
+                  background: '#f0f0f0',
+                }}
+              >
+                <img
+                  src={img.thumbnail_url || img.url}
+                  alt={img.alt_text || ''}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </button>
+            ))}
           </div>
         )}
       </div>
       <div>
-        <h1 style={{ fontSize: '32px', marginBottom: '16px' }}>{product.display_name || product.name_en || product.name}</h1>
+        <h1 style={{ fontSize: '32px', marginBottom: '16px' }}>{product.name || product.name_en || product.display_name}</h1>
         <div style={{ marginBottom: '20px' }}>
           {product.sale_price && product.sale_price < product.base_price ? (
             <div>
@@ -77,7 +152,7 @@ export default function ProductDetail({ product }: { product: any }) {
             </div>
           )}
         </div>
-        <p style={{ marginBottom: '20px', lineHeight: '1.8', color: '#666' }}>{product.display_description || product.short_description || product.description}</p>
+        <p style={{ marginBottom: '20px', lineHeight: '1.8', color: '#666' }}>{product.description || product.short_description || product.display_description}</p>
         
         {product.rating_average > 0 && (
           <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>

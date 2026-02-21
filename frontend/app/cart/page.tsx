@@ -5,6 +5,7 @@ import { getCart, createOrder, API_BASE } from '@/lib/api'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import { getCategories } from '@/lib/api'
+import { getProductImageUrl } from '@/lib/productImage'
 
 export default function CartPage() {
   const [cart, setCart] = useState<any>({ items: [], total: 0 })
@@ -105,7 +106,7 @@ export default function CartPage() {
                     }}
                   >
                     <img
-                      src={item.product.image_url || '/placeholder.jpg'}
+                      src={getProductImageUrl(item.product, 100, 100)}
                       alt={item.product.name}
                       style={{ width: '100px', height: '100px', objectFit: 'cover' }}
                     />

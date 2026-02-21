@@ -262,6 +262,34 @@ func GetProduct(c *gin.Context) {
 		price = p.SalePrice.Float64
 	}
 
+	// Load all product images for gallery
+	mediaRows, _ := database.DB.Query(
+		"SELECT id, url, thumbnail_url, alt_text, sort_order, is_primary FROM product_media WHERE product_id = ? AND type = 'image' ORDER BY is_primary DESC, sort_order ASC, id ASC",
+		id,
+	)
+	images := []map[string]interface{}{}
+	if mediaRows != nil {
+		defer mediaRows.Close()
+		for mediaRows.Next() {
+			var mid int
+			var url string
+			var thumbURL, altText sql.NullString
+			var sortOrder int
+			var isPrimary bool
+			if err := mediaRows.Scan(&mid, &url, &thumbURL, &altText, &sortOrder, &isPrimary); err != nil {
+				continue
+			}
+			images = append(images, map[string]interface{}{
+				"id":          mid,
+				"url":         url,
+				"thumbnail_url": getStringValue(thumbURL),
+				"alt_text":    getStringValue(altText),
+				"sort_order":  sortOrder,
+				"is_primary":  isPrimary,
+			})
+		}
+	}
+
 	product := map[string]interface{}{
 		"id":                  p.ID,
 		"name":                p.Name,
@@ -274,6 +302,7 @@ func GetProduct(c *gin.Context) {
 		"sale_price":         getFloatValue(p.SalePrice),
 		"price":               price,
 		"image_url":           getStringValue(p.ImageURL),
+		"images":              images,
 		"category_id":         getIntValue(p.CategoryID),
 		"brand_id":            getIntValue(p.BrandID),
 		"sku":                 p.SKU,

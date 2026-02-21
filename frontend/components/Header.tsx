@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { API_BASE } from '@/lib/api'
 
-export default function Header({ categories }: { categories: any[] }) {
+export default function Header({ categories = [] }: { categories?: any[] }) {
   const [cartCount, setCartCount] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -101,7 +101,7 @@ export default function Header({ categories }: { categories: any[] }) {
           <Link href="/products" style={{ whiteSpace: 'nowrap', color: '#232933', fontWeight: '500' }}>
             همه محصولات
           </Link>
-          {categories.slice(0, 8).map((cat: any) => (
+          {(categories || []).slice(0, 8).map((cat: any) => (
             <Link key={cat.id} href={`/category/${cat.slug}`} style={{ whiteSpace: 'nowrap', color: '#232933' }}>
               {cat.name}
             </Link>

@@ -2,13 +2,25 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
+	"mime"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"shop-api/database"
 
 	"github.com/gin-gonic/gin"
 )
+
+const uploadDir = "uploads"
+const uploadProductsDir = "uploads/products"
+const maxUploadSize = 10 << 20 // 10 MB
+var allowedImageTypes = map[string]bool{
+	"image/jpeg": true, "image/jpg": true, "image/png": true, "image/gif": true, "image/webp": true,
+}
 
 // AdminCreateProduct creates a new product
 func AdminCreateProduct(c *gin.Context) {
@@ -98,7 +110,197 @@ func AdminBulkUploadProducts(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "آپلود دسته‌ای در حال توسعه است"})
 }
 
-// AdminCreateCategory creates a category
+// AdminListProductMedia returns all media for a product (admin can use GET /products/:id which includes images)
+// This endpoint allows listing without full product payload if needed.
+func AdminListProductMedia(c *gin.Context) {
+	productID := c.Param("id")
+	rows, err := database.DB.Query(
+		"SELECT id, product_id, type, url, thumbnail_url, alt_text, sort_order, is_primary FROM product_media WHERE product_id = ? ORDER BY is_primary DESC, sort_order ASC, id ASC",
+		productID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+	type mediaRow struct {
+		ID          int
+		ProductID   int
+		Type        string
+		URL         string
+		ThumbURL    sql.NullString
+		AltText     sql.NullString
+		SortOrder   int
+		IsPrimary   bool
+	}
+	var list []map[string]interface{}
+	for rows.Next() {
+		var m mediaRow
+		if err := rows.Scan(&m.ID, &m.ProductID, &m.Type, &m.URL, &m.ThumbURL, &m.AltText, &m.SortOrder, &m.IsPrimary); err != nil {
+			continue
+		}
+		list = append(list, map[string]interface{}{
+			"id":            m.ID,
+			"product_id":    m.ProductID,
+			"type":          m.Type,
+			"url":           m.URL,
+			"thumbnail_url": getStringValue(m.ThumbURL),
+			"alt_text":      getStringValue(m.AltText),
+			"sort_order":    m.SortOrder,
+			"is_primary":    m.IsPrimary,
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"media": list})
+}
+
+// AdminAddProductMedia adds an image (by URL) to a product
+func AdminAddProductMedia(c *gin.Context) {
+	productID := c.Param("id")
+	var req struct {
+		URL       string `json:"url" binding:"required"`
+		AltText   string `json:"alt_text"`
+		IsPrimary bool   `json:"is_primary"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "آدرس تصویر الزامی است"})
+		return
+	}
+	if req.IsPrimary {
+		database.DB.Exec("UPDATE product_media SET is_primary = FALSE WHERE product_id = ?", productID)
+	}
+	var maxOrder sql.NullInt64
+	database.DB.QueryRow("SELECT COALESCE(MAX(sort_order), 0) FROM product_media WHERE product_id = ?", productID).Scan(&maxOrder)
+	sortOrder := 0
+	if maxOrder.Valid {
+		sortOrder = int(maxOrder.Int64) + 1
+	}
+	result, err := database.DB.Exec(
+		"INSERT INTO product_media (product_id, type, url, alt_text, is_primary, sort_order) VALUES (?, 'image', ?, ?, ?, ?)",
+		productID, req.URL, req.AltText, req.IsPrimary, sortOrder,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "خطا در افزودن تصویر"})
+		return
+	}
+	lastID, _ := result.LastInsertId()
+	c.JSON(http.StatusCreated, gin.H{"message": "تصویر اضافه شد", "id": lastID})
+}
+
+// AdminUploadProductMedia accepts multipart file upload, saves to disk, and creates product_media row.
+func AdminUploadProductMedia(c *gin.Context) {
+	productID := c.Param("id")
+	if err := os.MkdirAll(uploadProductsDir, 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "خطا در ایجاد پوشهٔ آپلود"})
+		return
+	}
+
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "فرم multipart معتبر نیست"})
+		return
+	}
+	files := form.File["file"]
+	if len(files) == 0 {
+		files = form.File["files"]
+	}
+	if len(files) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "هیچ فایلی انتخاب نشده است. فیلد نام باید «file» یا «files» باشد."})
+		return
+	}
+
+	isPrimaryStr := c.PostForm("is_primary")
+	altText := c.PostForm("alt_text")
+	setPrimary := isPrimaryStr == "true" || isPrimaryStr == "1"
+
+	if setPrimary {
+		database.DB.Exec("UPDATE product_media SET is_primary = FALSE WHERE product_id = ?", productID)
+	}
+
+	var maxOrder sql.NullInt64
+	database.DB.QueryRow("SELECT COALESCE(MAX(sort_order), 0) FROM product_media WHERE product_id = ?", productID).Scan(&maxOrder)
+	sortOrder := 0
+	if maxOrder.Valid {
+		sortOrder = int(maxOrder.Int64) + 1
+	}
+
+	created := []map[string]interface{}{}
+	for i, fileHeader := range files {
+		if fileHeader.Size > maxUploadSize {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("حجم فایل «%s» بیش از حد مجاز است (حداکثر ۱۰ مگابایت)", fileHeader.Filename)})
+			return
+		}
+		ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+		if ext == "" {
+			ext = ".jpg"
+		}
+		ct := fileHeader.Header.Get("Content-Type")
+		if ct == "" {
+			ct = mime.TypeByExtension(ext)
+		}
+		if !allowedImageTypes[ct] {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "فقط تصاویر (JPEG, PNG, GIF, WebP) مجاز هستند"})
+			return
+		}
+		filename := fmt.Sprintf("%s_%d_%d%s", productID, time.Now().UnixNano(), i, ext)
+		destPath := filepath.Join(uploadProductsDir, filename)
+		if err := c.SaveUploadedFile(fileHeader, destPath); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "خطا در ذخیرهٔ فایل"})
+			return
+		}
+		// URL that frontend can use (relative; Next can proxy /uploads to backend)
+		urlPath := "/uploads/products/" + filename
+		primary := setPrimary && i == 0
+		result, err := database.DB.Exec(
+			"INSERT INTO product_media (product_id, type, url, alt_text, is_primary, sort_order) VALUES (?, 'image', ?, ?, ?, ?)",
+			productID, urlPath, altText, primary, sortOrder+i,
+		)
+		if err != nil {
+			os.Remove(destPath)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "خطا در ثبت تصویر در دیتابیس"})
+			return
+		}
+		lastID, _ := result.LastInsertId()
+		created = append(created, map[string]interface{}{"id": lastID, "url": urlPath})
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "تصویر(ها) با موفقیت آپلود شد", "media": created})
+}
+
+// AdminSetPrimaryProductMedia sets one media as primary (and unsets others)
+func AdminSetPrimaryProductMedia(c *gin.Context) {
+	productID := c.Param("id")
+	mediaID := c.Param("mediaId")
+	database.DB.Exec("UPDATE product_media SET is_primary = FALSE WHERE product_id = ?", productID)
+	result, err := database.DB.Exec("UPDATE product_media SET is_primary = TRUE WHERE id = ? AND product_id = ?", mediaID, productID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "خطا در به‌روزرسانی"})
+		return
+	}
+	affected, _ := result.RowsAffected()
+	if affected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "تصویر یافت نشد"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "تصویر اصلی تنظیم شد"})
+}
+
+// AdminDeleteProductMedia removes a media from product
+func AdminDeleteProductMedia(c *gin.Context) {
+	productID := c.Param("id")
+	mediaID := c.Param("mediaId")
+	result, err := database.DB.Exec("DELETE FROM product_media WHERE id = ? AND product_id = ?", mediaID, productID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "خطا در حذف"})
+		return
+	}
+	affected, _ := result.RowsAffected()
+	if affected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "تصویر یافت نشد"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "تصویر حذف شد"})
+}
+
 func AdminCreateCategory(c *gin.Context) {
 	var req struct {
 		Name        string `json:"name" binding:"required"`

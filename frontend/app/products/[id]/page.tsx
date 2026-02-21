@@ -6,8 +6,8 @@ import Link from 'next/link'
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const product = await getProduct(params.id)
-  const title = product?.display_name || product?.name_en || product?.name || 'Product'
-  const desc = product?.display_description || product?.short_description || product?.description || ''
+  const title = product?.name || product?.name_en || product?.display_name || 'Product'
+  const desc = product?.description || product?.short_description || product?.display_description || ''
   return {
     title: `${title} - Women's Fashion Store`,
     description: desc,

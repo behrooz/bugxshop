@@ -107,3 +107,36 @@ export async function createOrder(orderData: any) {
   }
 }
 
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('token')
+    if (token) headers['Authorization'] = `Bearer ${token}`
+  }
+  return headers
+}
+
+export async function getProfile() {
+  const response = await fetch(`${API_BASE}/user/profile`, { headers: getAuthHeaders() })
+  if (!response.ok) throw new Error('Unauthorized')
+  return response.json()
+}
+
+export async function updateProfile(data: {
+  first_name?: string
+  last_name?: string
+  email?: string
+  mobile?: string
+  birth_date?: string
+  gender?: string
+}) {
+  const response = await fetch(`${API_BASE}/user/profile`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  })
+  const json = await response.json()
+  if (!response.ok) throw new Error(json.error || 'خطا در به‌روزرسانی')
+  return json
+}
+
